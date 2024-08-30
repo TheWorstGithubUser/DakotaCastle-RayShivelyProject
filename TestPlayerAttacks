@@ -4,85 +4,60 @@ using UnityEngine;
 
 public class TestPlayerAttacks : MonoBehaviour
 {
+    [Header("Inscribed")]
+    public GameObject hitboxPrefab;
+    public GameObject hadoukenPrefab;
+    public int inscribedHitPos;
+
     [SerializeField] private GameInput GameInput;
     private TestPlayerMovement TestPlayerMovement;
     public CanAct canAct;
-    private GameObject hitboxPrefab;  //hitbox MUST BE PRESENT IN THE SCENE ON START
-    private HitboxData HitboxData;
     private GameObject hitbox;
+    private HitboxData hitboxData;
     private Animator animator;
+    static public bool hadoExists = false;
     static private TestPlayerAttacks TestPlayerAttacksSingleton;
-    int[] pootisCombo = { 6, 2, 3 };
 
-    void Start() 
+    void Start()
     {
         TestPlayerAttacksSingleton = this;
-    }
-    void Awake()
-    {
-        hitboxPrefab = GameObject.FindWithTag("Hitbox");
-        animator = this.GetComponentInChildren<Animator>();
         TestPlayerMovement = this.GetComponent<TestPlayerMovement>();
-        HitboxData = hitboxPrefab.GetComponent<HitboxData>();
-        Application.targetFrameRate = 60;
         canAct = TestPlayerMovement.canAct;
+        Application.targetFrameRate = 60;
+        animator = this.GetComponentInChildren<Animator>();
+        hitboxData = hitboxPrefab.GetComponent<HitboxData>();
     }
 
     void FixedUpdate()
     {
-        if (TestPlayerMovement.Heftydefeated == true)
-            return;
- 
         if (canAct.anyAttacks())
         {
             char button = GameInput.GetButton();
             switch (button)
             {
                 case 'L':   //LIGHT (5L)
-                    if (canAct.canI("special") && TestPlayerMovement.player1Inputs.searchSpecial(pootisCombo))
+                    if (canAct.canI("special") && !hadoExists && TestPlayerMovement.player1Inputs.searchSpecial(hadoukenCombo))
                     {
-                        animator.Play("HeftyPootisPow");
-                    }
-                    else if (TestPlayerMovement.crouching == false)
-                    {
-                        animator.Play("Hefty5L");
+                        Instantiate(hadoukenPrefab);
                     }
                     else
                     {
-                        animator.Play("Hefty2L");
+                        animator.Play("5L");
                     }
                     break;
                 case 'M':   //MEDIUM (5M)
-                    animator.Play("Hefty5M");
                     break;
                 case 'H':   //HEAVY (5H)
-                    animator.Play("Hefty5H");
                     break;
             }
         }
-
-
     }
 
-    static public void LockCanAct() 
-    {
-        TestPlayerAttacksSingleton.canAct.lockExcept();
-    }
+    int[] hadoukenCombo = { 6, 2, 3 };
 
-    static public void freeCanAct() 
-    {
-        TestPlayerAttacksSingleton.canAct.freeExcept();
-    }
 
-    //ATTACKS
     private int dmg;
     private int hitstun;
-
-    public void killCurrentHitbox() 
-    {
-        if (hitbox != null)
-            Destroy(hitbox);
-    }
 
     //5L
     public void On5LSpawnHitbox()
@@ -92,184 +67,45 @@ public class TestPlayerAttacks : MonoBehaviour
             Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
             return;
         }
-        else
+        //Set values
+        dmg = 5;
+        hitstun = 5;
+        //Create hitbox
+        hitbox = Instantiate(hitboxPrefab);
+        hitbox.transform.SetParent(this.transform);
+        hitbox.transform.position = this.transform.position;
+        //Move hitbox
+        if (TestPlayerMovement.left)
         {
-            //Set values
-            dmg = 5;
-            hitstun = 5;
-            //Adjust values
-            HitboxData.damage = dmg;
-            HitboxData.hitstun = hitstun;
-            HitboxData.left = TestPlayerMovement.left;
-            HitboxData.Player1 = true;
-            HitboxData.hitPos = 4;
-            //Create hitbox
-            hitbox = Instantiate(hitboxPrefab);
-            hitbox.transform.SetParent(this.transform);
-            hitbox.transform.position = this.transform.position;
-            //Move hitbox
-            if (TestPlayerMovement.left)
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y, hitbox.transform.position.z);
-            }
-            else
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y, hitbox.transform.position.z);
-            }
-            //Resize hitbox
-            hitbox.transform.localScale = new Vector3(1.2f, 2, 1);
-        }
-    }
-    //--------------------------------------------------------------------------------------------------------
-    //2L
-    public void On2LSpawnHitbox()
-    {
-        if (hitbox != null)
-        {
-            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
-            return;
+            hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y, hitbox.transform.position.z);
         }
         else
         {
-            //Set values
-            dmg = 8;
-            hitstun = 7;
-            //Adjust values
-            HitboxData.damage = dmg;
-            HitboxData.hitstun = hitstun;
-            HitboxData.left = TestPlayerMovement.left;
-            HitboxData.Player1 = true;
-            HitboxData.hitPos = 1;
-            //Create hitbox
-            hitbox = Instantiate(hitboxPrefab);
-            hitbox.transform.SetParent(this.transform);
-            hitbox.transform.position = this.transform.position;
-            //Move hitbox
-            if (TestPlayerMovement.left)
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
-            }
-            else
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
-            }
-            //Resize hitbox
-            hitbox.transform.localScale = new Vector3(1.3f, 1, 1);
-
+            hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y, hitbox.transform.position.z);
         }
-    }
-    //--------------------------------------------------------------------------------------------------------
-    //5M
-    public void On5MSpawnHitbox()
-    {
-        if (hitbox != null)
-        {
-            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
-            return;
-        }
-        else
-        {
-            //Set values
-            dmg = 8;
-            hitstun = 7;
-            //Adjust values
-            HitboxData.damage = dmg;
-            HitboxData.hitstun = hitstun;
-            HitboxData.left = TestPlayerMovement.left;
-            HitboxData.Player1 = true;
-            HitboxData.hitPos = 4;
-            //Create hitbox
-            hitbox = Instantiate(hitboxPrefab);
-            hitbox.transform.SetParent(this.transform);
-            hitbox.transform.position = this.transform.position;
-            //Move hitbox
-            if (TestPlayerMovement.left)
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
-            }
-            else
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
-            }
-            //Resize hitbox
-            hitbox.transform.localScale = new Vector3(1.3f, 1, 1);
-
-        }
-    }
-    //--------------------------------------------------------------------------------------------------------
-    //5H
-    public void On5HSpawnHitbox() 
-    {
-        if (hitbox != null)
-        {
-            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
-            return;
-        }
-        else
-        {
-            //Set values
-            dmg = 40;
-            hitstun = 40;
-            //Adjust values
-            HitboxData.damage = dmg;
-            HitboxData.hitstun = hitstun;
-            HitboxData.left = TestPlayerMovement.left;
-            HitboxData.Player1 = true;
-            HitboxData.hitPos = 4;
-            //Create hitbox
-            hitbox = Instantiate(hitboxPrefab);
-            hitbox.transform.SetParent(this.transform);
-            hitbox.transform.position = this.transform.position;
-            //Move hitbox
-            if (TestPlayerMovement.left)
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y + 1f, hitbox.transform.position.z);
-            }
-            else
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y + 1f, hitbox.transform.position.z);
-            }
-            //Resize hitbox
-            hitbox.transform.localScale = new Vector3(1.5f, 1.2f, 1);
-
-        }
+        //Resize hitbox
+        hitbox.transform.localScale = new Vector3(1.2f, 2, 1);
+        //Adjust values
+        hitboxData.damage = dmg;
+        hitboxData.hitstun = hitstun;
+        hitboxData.left = TestPlayerMovement.left;
+        hitboxData.hitPos = inscribedHitPos;
     }
 
-    //SPECIAL MOVES
-    public void OnPootisPowSpawnHitbox() 
+    public void On5LKillHitbox()
     {
         if (hitbox != null)
-        {
-            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
-            return;
-        }
-        else
-        {
-            //Set values
-            dmg = 100;
-            hitstun = 30;
-            //Adjust values
-            HitboxData.damage = dmg;
-            HitboxData.hitstun = hitstun;
-            HitboxData.left = TestPlayerMovement.left;
-            HitboxData.Player1 = true;
-            HitboxData.hitPos = 4;
-            //Create hitbox
-            hitbox = Instantiate(hitboxPrefab);
-            hitbox.transform.SetParent(this.transform);
-            hitbox.transform.position = this.transform.position;
-            //Move hitbox
-            if (TestPlayerMovement.left)
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 5.5f, hitbox.transform.position.y, hitbox.transform.position.z);
-            }
-            else
-            {
-                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 5.5f, hitbox.transform.position.y, hitbox.transform.position.z);
-            }
-            //Resize hitbox
-            hitbox.transform.localScale = new Vector3(10f, 2, 1);
+            Destroy(hitbox);
+        canAct.enable("special");
+    }
 
-        }
+    static public void freeCanAct()
+    {
+        TestPlayerAttacksSingleton.canAct.freeExcept();
+    }
+
+    static public void lockCanAct()
+    {
+        TestPlayerAttacksSingleton.canAct.lockExcept();
     }
 }
