@@ -1,0 +1,275 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class TestPlayerAttacks : MonoBehaviour
+{
+    [SerializeField] private GameInput GameInput;
+    private TestPlayerMovement TestPlayerMovement;
+    public CanAct canAct;
+    private GameObject hitboxPrefab;  //hitbox MUST BE PRESENT IN THE SCENE ON START
+    private HitboxData HitboxData;
+    private GameObject hitbox;
+    private Animator animator;
+    static private TestPlayerAttacks TestPlayerAttacksSingleton;
+    int[] pootisCombo = { 6, 2, 3 };
+
+    void Start() 
+    {
+        TestPlayerAttacksSingleton = this;
+    }
+    void Awake()
+    {
+        hitboxPrefab = GameObject.FindWithTag("Hitbox");
+        animator = this.GetComponentInChildren<Animator>();
+        TestPlayerMovement = this.GetComponent<TestPlayerMovement>();
+        HitboxData = hitboxPrefab.GetComponent<HitboxData>();
+        Application.targetFrameRate = 60;
+        canAct = TestPlayerMovement.canAct;
+    }
+
+    void FixedUpdate()
+    {
+        if (TestPlayerMovement.Heftydefeated == true)
+            return;
+ 
+        if (canAct.anyAttacks())
+        {
+            char button = GameInput.GetButton();
+            switch (button)
+            {
+                case 'L':   //LIGHT (5L)
+                    if (canAct.canI("special") && TestPlayerMovement.player1Inputs.searchSpecial(pootisCombo))
+                    {
+                        animator.Play("HeftyPootisPow");
+                    }
+                    else if (TestPlayerMovement.crouching == false)
+                    {
+                        animator.Play("Hefty5L");
+                    }
+                    else
+                    {
+                        animator.Play("Hefty2L");
+                    }
+                    break;
+                case 'M':   //MEDIUM (5M)
+                    animator.Play("Hefty5M");
+                    break;
+                case 'H':   //HEAVY (5H)
+                    animator.Play("Hefty5H");
+                    break;
+            }
+        }
+
+
+    }
+
+    static public void LockCanAct() 
+    {
+        TestPlayerAttacksSingleton.canAct.lockExcept();
+    }
+
+    static public void freeCanAct() 
+    {
+        TestPlayerAttacksSingleton.canAct.freeExcept();
+    }
+
+    //ATTACKS
+    private int dmg;
+    private int hitstun;
+
+    public void killCurrentHitbox() 
+    {
+        if (hitbox != null)
+            Destroy(hitbox);
+    }
+
+    //5L
+    public void On5LSpawnHitbox()
+    {
+        if (hitbox != null)
+        {
+            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
+            return;
+        }
+        else
+        {
+            //Set values
+            dmg = 5;
+            hitstun = 5;
+            //Adjust values
+            HitboxData.damage = dmg;
+            HitboxData.hitstun = hitstun;
+            HitboxData.left = TestPlayerMovement.left;
+            HitboxData.Player1 = true;
+            HitboxData.hitPos = 4;
+            //Create hitbox
+            hitbox = Instantiate(hitboxPrefab);
+            hitbox.transform.SetParent(this.transform);
+            hitbox.transform.position = this.transform.position;
+            //Move hitbox
+            if (TestPlayerMovement.left)
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y, hitbox.transform.position.z);
+            }
+            else
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y, hitbox.transform.position.z);
+            }
+            //Resize hitbox
+            hitbox.transform.localScale = new Vector3(1.2f, 2, 1);
+        }
+    }
+    //--------------------------------------------------------------------------------------------------------
+    //2L
+    public void On2LSpawnHitbox()
+    {
+        if (hitbox != null)
+        {
+            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
+            return;
+        }
+        else
+        {
+            //Set values
+            dmg = 8;
+            hitstun = 7;
+            //Adjust values
+            HitboxData.damage = dmg;
+            HitboxData.hitstun = hitstun;
+            HitboxData.left = TestPlayerMovement.left;
+            HitboxData.Player1 = true;
+            HitboxData.hitPos = 1;
+            //Create hitbox
+            hitbox = Instantiate(hitboxPrefab);
+            hitbox.transform.SetParent(this.transform);
+            hitbox.transform.position = this.transform.position;
+            //Move hitbox
+            if (TestPlayerMovement.left)
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
+            }
+            else
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
+            }
+            //Resize hitbox
+            hitbox.transform.localScale = new Vector3(1.3f, 1, 1);
+
+        }
+    }
+    //--------------------------------------------------------------------------------------------------------
+    //5M
+    public void On5MSpawnHitbox()
+    {
+        if (hitbox != null)
+        {
+            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
+            return;
+        }
+        else
+        {
+            //Set values
+            dmg = 8;
+            hitstun = 7;
+            //Adjust values
+            HitboxData.damage = dmg;
+            HitboxData.hitstun = hitstun;
+            HitboxData.left = TestPlayerMovement.left;
+            HitboxData.Player1 = true;
+            HitboxData.hitPos = 4;
+            //Create hitbox
+            hitbox = Instantiate(hitboxPrefab);
+            hitbox.transform.SetParent(this.transform);
+            hitbox.transform.position = this.transform.position;
+            //Move hitbox
+            if (TestPlayerMovement.left)
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
+            }
+            else
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y - 0.5f, hitbox.transform.position.z);
+            }
+            //Resize hitbox
+            hitbox.transform.localScale = new Vector3(1.3f, 1, 1);
+
+        }
+    }
+    //--------------------------------------------------------------------------------------------------------
+    //5H
+    public void On5HSpawnHitbox() 
+    {
+        if (hitbox != null)
+        {
+            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
+            return;
+        }
+        else
+        {
+            //Set values
+            dmg = 40;
+            hitstun = 40;
+            //Adjust values
+            HitboxData.damage = dmg;
+            HitboxData.hitstun = hitstun;
+            HitboxData.left = TestPlayerMovement.left;
+            HitboxData.Player1 = true;
+            HitboxData.hitPos = 4;
+            //Create hitbox
+            hitbox = Instantiate(hitboxPrefab);
+            hitbox.transform.SetParent(this.transform);
+            hitbox.transform.position = this.transform.position;
+            //Move hitbox
+            if (TestPlayerMovement.left)
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 1.5f, hitbox.transform.position.y + 1f, hitbox.transform.position.z);
+            }
+            else
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 1.5f, hitbox.transform.position.y + 1f, hitbox.transform.position.z);
+            }
+            //Resize hitbox
+            hitbox.transform.localScale = new Vector3(1.5f, 1.2f, 1);
+
+        }
+    }
+
+    //SPECIAL MOVES
+    public void OnPootisPowSpawnHitbox() 
+    {
+        if (hitbox != null)
+        {
+            Debug.Log("There was an attempt to spawn a hitbox when a hitbox was already active");
+            return;
+        }
+        else
+        {
+            //Set values
+            dmg = 100;
+            hitstun = 30;
+            //Adjust values
+            HitboxData.damage = dmg;
+            HitboxData.hitstun = hitstun;
+            HitboxData.left = TestPlayerMovement.left;
+            HitboxData.Player1 = true;
+            HitboxData.hitPos = 4;
+            //Create hitbox
+            hitbox = Instantiate(hitboxPrefab);
+            hitbox.transform.SetParent(this.transform);
+            hitbox.transform.position = this.transform.position;
+            //Move hitbox
+            if (TestPlayerMovement.left)
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x + 5.5f, hitbox.transform.position.y, hitbox.transform.position.z);
+            }
+            else
+            {
+                hitbox.transform.position = new Vector3(hitbox.transform.position.x - 5.5f, hitbox.transform.position.y, hitbox.transform.position.z);
+            }
+            //Resize hitbox
+            hitbox.transform.localScale = new Vector3(10f, 2, 1);
+
+        }
+    }
+}
