@@ -1,0 +1,63 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Hadouken : MonoBehaviour
+{
+    public GameObject Riu;
+    public Vector3 charPos;
+    public bool left;
+    public int direction;
+    private HitboxData HitboxData;
+
+    [Header("Inscribed")]
+    public float speed;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        Riu = GameObject.FindWithTag("Player2");
+        speed = 3;
+        HitboxData = this.GetComponent<HitboxData>();
+
+        Player2Attacks.hadoExists = true;
+        //Debug.Log("No hadouken allowed");
+        charPos = Riu.transform.position;
+        left = Riu.GetComponent<Player2Health>().left2;
+        if (left)
+        {
+            this.transform.position = new Vector3(charPos.x + 1.5f, charPos.y, charPos.z);
+            this.transform.rotation = Quaternion.Euler(180, 0, 0);
+            direction = 1;
+            //Debug.Log(this.transform.position);
+        }
+        else
+        {
+            this.transform.position = new Vector3(charPos.x - 1.5f, charPos.y, charPos.z);
+            direction = -1;
+            //Debug.Log(this.transform.position);
+        }
+    }
+
+
+    // Update is called once per frame
+    void FixedUpdate()
+    {
+        Vector3 pos = transform.position;
+        pos.x += direction * speed * Time.deltaTime;
+        transform.position = pos;
+    }
+
+    private int dmg;
+    private int hitstun;
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (Player2Attacks.hadoExists)
+        {
+            //Debug.Log("Destroyed Hado");
+            Player2Attacks.hadoExists = false;
+            Destroy(gameObject);
+           // Debug.Log("Sure you can hadouken");
+        }
+    }
+}
