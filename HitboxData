@@ -1,0 +1,16 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class HitboxData : MonoBehaviour
+{
+    public int damage;
+    [Tooltip("number of frames opponent will be in hitstun for when this attack lands")]
+    public int hitstun; //in frames
+    public bool left;
+    public bool Player1;
+    public int hitPos;
+    
+    //Hitbox requires rigidbody2D and boxcollider 
+
+}
