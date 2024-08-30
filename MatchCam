@@ -1,0 +1,155 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class MatchCam : MonoBehaviour
+{
+    public TestPlayerMovement TestPlayerMovement;
+
+
+    private float reso = (float)Screen.width / (float)Screen.height;
+
+    [Header("Inscribed")]
+    //ortho size
+    public float maxSize = 3.5f;
+    public float minSize = 3;
+    public float distMinThreshold = 8;
+    public float sizeChangeDivisor = 4;
+    //camera pos
+    public float maxXPos = 10;
+    public float minXPos = -10;
+    public float distMax = 14;
+
+    [Header("Dynamic")]
+    public float dist;
+    private float lastDist;
+    private float diffDist;
+    private Vector3 p1Pos;
+    private Vector3 p2Pos;
+    private Vector3 camPos;
+    private float targetPos;
+    //ortho size
+    private float currSize;
+    public float distThreshold;
+
+    //used only for bounds
+    private GameObject leftBound;
+    private GameObject rightBound;
+    private Vector3 leftBoundPos;
+    private Vector3 rightBoundPos;
+    private float horiSize;
+
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        //determine what the upper range for camera size change should be
+        distThreshold = distMinThreshold + ((maxSize - minSize) * sizeChangeDivisor);
+
+        //get initial screen width and camera position
+        horiSize = Camera.main.orthographicSize * reso;
+        camPos = Camera.main.transform.position;
+
+        //create left bound and right bound game objects to stop players from walking off screen
+        leftBound = new GameObject();
+        leftBoundPos = new Vector3(camPos.x - horiSize, camPos.y, 0);
+        leftBound.transform.position = leftBoundPos;
+        leftBound.transform.localScale = new Vector3(0.4f, 12, 1);
+        leftBound.AddComponent<BoxCollider2D>();
+        leftBound.AddComponent<Rigidbody2D>();
+        leftBound.GetComponent<Rigidbody2D>().freezeRotation = true;
+        leftBound.GetComponent<Rigidbody2D>().collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        leftBound.layer = 8;
+
+        rightBound = new GameObject();
+        rightBoundPos = new Vector3(camPos.x + horiSize, camPos.y, 0);
+        rightBound.transform.position = rightBoundPos;
+        rightBound.transform.localScale = new Vector3(0.4f, 12, 1);
+        rightBound.AddComponent<BoxCollider2D>();
+        rightBound.AddComponent<Rigidbody2D>();
+        rightBound.GetComponent<Rigidbody2D>().freezeRotation = true;
+        rightBound.GetComponent<Rigidbody2D>().collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        rightBound.layer = 8;
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        //get positions of the characters
+        p1Pos = TestPlayerMovement.getMyPos();
+        p2Pos = TestPlayerMovement.getTheirPos();
+
+        //determine the distance between them
+        dist = Mathf.Abs(p1Pos.x - p2Pos.x);
+
+        //get current orthographic size for conditions
+        currSize = Camera.main.orthographicSize;
+
+        //calculate ethe difference between this frames dist and last frames dist
+        diffDist = dist - lastDist;
+
+        //if dist is in the range we want to change size in
+        if (dist > distMinThreshold && dist < distThreshold)
+        {
+            //and the size is not too big or small
+            if (currSize < maxSize && currSize > minSize)
+            {
+                //change the size based on the difference in distance from last frame
+                //sizeChangeDivisor controls the speed the size changes (dont want too fast of a change; it's jarring)
+                Camera.main.orthographicSize += diffDist / sizeChangeDivisor;
+            }
+            //if the size is too big, set to maxSize
+            else if (currSize >= maxSize)
+            {
+                Camera.main.orthographicSize = maxSize;
+                //and if the distance is shrinking, decrease the size
+                if (diffDist < 0)
+                    Camera.main.orthographicSize += diffDist / sizeChangeDivisor;
+            }
+            //if the size is too small, set to minSize
+            else if (currSize <= minSize)
+            {
+                Camera.main.orthographicSize = minSize;
+                //and if the distance is growing, increase the size
+                if (diffDist > 0)
+                    Camera.main.orthographicSize += diffDist / sizeChangeDivisor;
+            }
+        }
+
+
+
+        //get the current position of the camera
+        camPos = Camera.main.transform.position;
+
+        //if the players can still move further apart
+        if (dist < distMax)
+        {
+            //determine a target position for the camera to move to
+            targetPos = (p1Pos.x + p2Pos.x) / 2;
+            camPos.x = targetPos;
+
+            //and if the camera isn't too far left or right, move to it
+            if (camPos.x < maxXPos && camPos.x > minXPos)
+            {
+                Camera.main.transform.position = camPos;
+            }
+            else
+            {
+                camPos = Camera.main.transform.position;
+            }
+        }
+
+        //get the screen width
+        horiSize = Camera.main.orthographicSize * reso;
+
+        //set the left and right bound positions to their respective edges of the screen
+        leftBoundPos.x = camPos.x - horiSize;
+        rightBoundPos.x = camPos.x + horiSize;
+        leftBound.transform.position = leftBoundPos;
+        rightBound.transform.position = rightBoundPos;
+
+        //set the last dist for comparison next frame
+        lastDist = dist;
+    }
+}
