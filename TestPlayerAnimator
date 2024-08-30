@@ -1,0 +1,87 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class TestPlayerAnimator : MonoBehaviour
+{
+    static private TestPlayerAnimator TestPlayerAnimatorSingleton;
+    private Animator animator;
+    private TestPlayerAttacks TestPlayerAttacks;
+    private TestPlayerMovement TestPlayerMovement;
+    private SpriteRenderer SR;
+    private bool leftAnim = true;
+
+    void Start()
+    {
+        TestPlayerAnimatorSingleton = this;
+        animator = this.GetComponent<Animator>();
+        TestPlayerAttacks = this.GetComponentInParent<TestPlayerAttacks>();
+        TestPlayerMovement = this.GetComponentInParent<TestPlayerMovement>();
+        SR = GetComponent<SpriteRenderer>();
+    }
+
+    // Update is called once per frame 
+    void FixedUpdate()
+    {
+        if (TestPlayerMovement.Heftydefeated == true)
+            return;
+
+        if (leftAnim != TestPlayerMovement.left)
+        {
+            leftAnim = TestPlayerMovement.left;
+            flipSprite();
+        }
+
+        if (TestPlayerMovement.crouching == true)
+        {
+            animator.SetBool("Crouching", true);
+            if (animator.GetCurrentAnimatorStateInfo(0).IsName("HeftyIdle"))
+            {
+                animator.Play("HeftyIdleCrouch");   //End idle early to crouch
+            }
+        }
+        else 
+        {
+            animator.SetBool("Crouching", false);
+        }
+    }
+
+    public void flipSprite() 
+    {
+        if(SR.flipX == false)
+            SR.flipX = true;
+        else
+            SR.flipX = false;
+    }
+
+    public void killHitbox() 
+    {
+        TestPlayerAttacks.killCurrentHitbox();
+    }
+
+    public void On5LightActive()
+    {
+        TestPlayerAttacks.On5LSpawnHitbox();
+    }
+
+    public void On2LightActive()
+    {
+        TestPlayerAttacks.On2LSpawnHitbox();
+    }
+
+    public void On5MediumActive() 
+    {
+        TestPlayerAttacks.On5MSpawnHitbox();
+    }
+
+    public void On5HeavyActive() 
+    {
+        TestPlayerAttacks.On5HSpawnHitbox();
+    }
+
+    public void OnPootisPowActive() 
+    {
+        TestPlayerAttacks.OnPootisPowSpawnHitbox();
+    }
+
+}
