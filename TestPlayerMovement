@@ -1,0 +1,794 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+public class TestPlayerMovement : MonoBehaviour
+{
+    //Variables that MUST be set in the inspector
+    [SerializeField] private GameInput gameInput;
+
+    //Variables for tracking player's status
+    private GameObject thisPlayer;
+    private GameObject otherPlayer;
+    public bool left = true;
+    public bool crouching = false;
+    private bool airborne = false;
+    public bool Heftydefeated = false;
+    [SerializeField] private float totalHeftyHP = 200;
+    public float player1HP;
+    public float player1HealthBarHP = 1;
+    private GameObject Healthbar;
+    private Transform transformVisual;
+    private Vector2 inputVector = new Vector2(0, 0);
+    // LinkedList<float> inputList = new LinkedList<float>(inputs);
+    private TestPlayerAttacks TestPlayerAttacks;
+    public int lagFrames = 0;
+
+    //CanAct object for conveniently controlling actions, and hitstun
+    public CanAct canAct = new CanAct();
+    public int hitstun = 0;
+
+    //Variables for influencing movement
+    [SerializeField] private float playerSpeed = 5.0f;
+    private float currentSpeed;
+    [SerializeField] private float dashMultiplier = 2.0f;
+    [SerializeField] private int airDashTime = 15;
+    [SerializeField] private int airDashLag = 7;
+    [SerializeField] private int numAirDashes = 1;
+    private int currAirDashes;
+    [SerializeField] private float jumpHeight = 5f;
+    [SerializeField] private int jumpLag = 5;
+    private int currJumpLag;
+    [SerializeField] private float gravityScale = 10f;
+    [SerializeField] private float towardsBonus = 3f;
+    [SerializeField] private float jumpTowardsBonus = 1.5f;
+    private float knockback = 5f;
+
+    //Input List variables
+    public InputList player1Inputs = new InputList();
+    private int inputBuild = 5;
+    private bool change = true;//detects if change in input
+    public int frames = 0;
+    public int currentInput;
+
+    //special combos
+    int[] pootisCombo = { 6, 2, 3 };
+
+    //Variables that make gravity work
+    private float velocity;
+    private float horizontalVelocity = 0;
+    private float floor = 0f;
+
+    private int airdashFrames = 0;   //When at 0, the player is currently not airdashing
+    private float currY;
+
+    private void Start()
+    {
+        otherPlayer = GameObject.FindWithTag("Player2");    //TODO: script that spawns the player(s) in with the correct tags
+        thisPlayer = GameObject.FindWithTag("Player1");
+        Healthbar = GameObject.FindWithTag("Healthbar1");
+        transformVisual = this.gameObject.transform.GetChild(0);
+        TestPlayerAttacks = this.GetComponent<TestPlayerAttacks>();
+        currentSpeed = playerSpeed;
+        currAirDashes = numAirDashes;
+        currJumpLag = 0;
+        player1HP = totalHeftyHP;
+
+    }
+
+    private void FixedUpdate()
+    {
+        if (hitstun > 1)
+        {
+            --hitstun;
+            return;
+        }
+        else if (hitstun == 1)
+        {
+            if (transform.position.y >= floor)
+            {
+                canAct.freeExcept();
+                --hitstun;
+                Debug.Log("Leaving hitstun");
+            }
+            return;
+        }
+
+        //GRAVITY
+        velocity += Physics2D.gravity.y * gravityScale * Time.deltaTime;
+
+        //Health tracking
+        if (player1HP <= 0)
+        {
+            if(Heftydefeated == false)
+                transformVisual.Rotate(90, 0, 90);
+            Heftydefeated = true;
+        }
+
+        if (Heftydefeated) { return; }   //just tells it to stop reading update
+
+
+        if (lagFrames == 0)
+        {
+            if (currJumpLag > 0) 
+            {
+                
+            }
+            //PLAYER INPUT
+            inputVector = gameInput.GetMovementVectorNormalized();
+            Vector2 controllerDir = new Vector2(inputVector.x, inputVector.y);
+
+            //PLAYER SIDE
+            if (otherPlayer.transform.position.x > transform.position.x)
+            {
+                if (!left)
+                {
+                    left = true;
+                    currentSpeed = playerSpeed;
+                }
+            }
+            else
+            {
+                if (left)
+                {
+                    left = false;
+                    currentSpeed = playerSpeed;
+                }
+
+            }
+
+            //MOVEMENT
+
+            //AIR DASH
+            if (airborne && gameInput.GetButton() == 'D' && airdashFrames <= 0 && currAirDashes > 0)
+            {
+                //Player is locked at their current y value for some time, and sent forward
+                airdashFrames = airDashTime;    //Send the player forward for x frames
+                lagFrames = airDashLag;
+                currY = transform.position.y;
+                //Decide direction
+                if (left)
+                {
+                    if (controllerDir.x <= -0.5f) //stick is on left
+                        horizontalVelocity = -5;    //back air dash
+                    else
+                        horizontalVelocity = 10;    //air dash
+                }
+                else
+                {
+                    if (controllerDir.x >= 0.5f) //stick is on right
+                        horizontalVelocity = 5;     //back air dash
+                    else
+                        horizontalVelocity = -10;   //air dash
+                }
+                currAirDashes--;
+            }
+
+            //GROUND DASH
+            if (!airborne && gameInput.GetButton() == 'D' && currentSpeed == playerSpeed)
+            {
+                if (left && !(controllerDir.x <= -0.5f))
+                {
+                    currentSpeed *= dashMultiplier;
+                }
+                else if (!left && !(controllerDir.x >= 0.5f))
+                {
+                    currentSpeed *= dashMultiplier;
+                }
+
+            }
+
+
+            //RIGHT
+            if (controllerDir.x >= 0.5f && controllerDir.y >= -0.5f && controllerDir.y <= 0.5f && !airborne)
+            {
+                if (left)
+                {
+                    //Debug.Log("Towards");
+                    if (canAct.all[canAct.lookup("move")])
+                    {
+                        Vector3 vectorthing = new Vector3(1 * towardsBonus, 0, 0); //I just decided to set it to 1 for consistent speeds
+                        vectorthing.x = vectorthing.x * Time.deltaTime * playerSpeed;         //Time.deltaTime prevents the game from exploding
+                        transform.position += vectorthing;                                    //Cannot edit transform.position directly
+                    }
+                    if (player1Inputs.first.input != 6)
+                    {
+                        inputBuild = 6;
+                        change = true;
+                    }                                                              //TODO: Give meter when "Towards"
+                }
+                else
+                {
+                    //Debug.Log("Away");
+                    if (canAct.all[canAct.lookup("move")])
+                    {
+                        Vector3 vectorthing = new Vector3(1, 0, 0);
+                        vectorthing.x = vectorthing.x * Time.deltaTime * playerSpeed;
+                        transform.position += vectorthing;
+                    }
+                    if (player1Inputs.first.input != 4)
+                    {
+                        inputBuild = 4;
+                        change = true;
+                    }
+                }
+                crouching = false;
+            }//LEFT
+            else if (controllerDir.x <= -0.5f && controllerDir.y >= -0.5f && controllerDir.y <= 0.5f && !airborne)
+            {
+                if (left)
+                {
+                    //Debug.Log("Away");
+                    if (canAct.all[canAct.lookup("move")])
+                    {
+                        Vector3 vectorthing = new Vector3(1, 0, 0);
+                        vectorthing.x = vectorthing.x * Time.deltaTime * playerSpeed;
+                        transform.position -= vectorthing;
+                    }
+
+                    if (player1Inputs.first.input != 4)
+                    {
+                        inputBuild = 4;
+                        change = true;
+                    }
+                }
+                else
+                {
+                    //Debug.Log("Towards");
+                    if (canAct.all[canAct.lookup("move")])
+                    {
+                        Vector3 vectorthing = new Vector3(1 * towardsBonus, 0, 0);
+                        vectorthing.x = vectorthing.x * Time.deltaTime * playerSpeed;
+                        transform.position -= vectorthing;
+                    }
+
+                    if (player1Inputs.first.input != 4)
+                    {
+                        inputBuild = 6;
+                        change = true;
+                    }
+                    //TODO: Give meter when "Towards"
+                }
+                crouching = false;
+            }
+            else if (controllerDir.x <= 0.5f && controllerDir.x >= -0.5f && controllerDir.y >= 0.5f) //Up
+            {
+                crouching = false;
+                if (!airborne && canAct.canI("jump"))
+                {
+                    Jump(8);
+                    inputBuild = 8;
+                    change = true;
+                    airborne = true;
+                }
+                else
+                {
+                    inputBuild = 8;
+                    change = true;
+                }
+            }
+            else if (controllerDir.x <= 0.5f && controllerDir.x >= -0.5f && controllerDir.y <= -0.5f) //Down
+            {
+                inputBuild = 2;
+                change = true;
+                crouching = true;
+            }
+            else if (controllerDir.x >= 0.5f && controllerDir.y >= 0.5f) //Up Right
+            {
+                crouching = false;
+                if (left && player1Inputs.first.input != 9)
+                {
+                    if (!airborne && canAct.canI("jump"))
+                    {
+                        velocity = Mathf.Sqrt(jumpHeight * -2 * (Physics2D.gravity.y * 5));
+                        horizontalVelocity = playerSpeed * jumpTowardsBonus;
+                        airborne = true;
+                    }
+                    else
+                    {
+                    }
+                    inputBuild = 9;
+                    change = true;
+                }
+                else if (!left && player1Inputs.first.input != 7)
+                {
+                    if (!airborne && canAct.canI("jump"))
+                    {
+                        velocity = Mathf.Sqrt(jumpHeight * -2 * (Physics2D.gravity.y * 5));
+                        horizontalVelocity = playerSpeed;
+                        airborne = true;
+                    }
+                    else
+                    {
+                    }
+                    inputBuild = 7;
+                    change = true;
+                }
+            }
+            else if (controllerDir.x >= 0.5f && controllerDir.y <= -0.5f)  //Down Right
+            {
+                if (left && player1Inputs.first.input != 3)
+                {
+                    inputBuild = 3;
+                    change = true;
+                }
+                else if (!left && player1Inputs.first.input != 1)
+                {
+                    inputBuild = 1;
+                    change = true;
+                }
+                crouching = true;
+            }
+            else if (controllerDir.x <= -0.5f && controllerDir.y >= 0.5f) //Up Left
+            {
+                crouching = false;
+                if (left && player1Inputs.first.input != 7)
+                {
+                    if (!airborne && canAct.canI("jump"))
+                    {
+                        Jump(7);
+                        horizontalVelocity = -playerSpeed;
+                        airborne = true;
+                    }
+                    inputBuild = 7;
+                    change = true;
+                }
+                else if (!left && player1Inputs.first.input != 9)
+                {
+                    if (!airborne && canAct.canI("jump"))
+                    {
+                        Jump(9);
+                        horizontalVelocity = -playerSpeed * jumpTowardsBonus;
+                        airborne = true;
+                    }
+                    inputBuild = 9;
+                    change = true;
+                }
+            }
+            else if (controllerDir.x <= -0.5f && controllerDir.y <= -0.5f)  //Down Left
+            {
+                if (left && player1Inputs.first.input != 1)
+                {
+                    inputBuild = 1;
+                    change = true;
+                }
+                else if (!left && player1Inputs.first.input != 3)
+                {
+                    inputBuild = 3;
+                    change = true;
+                }
+                crouching = true;
+            }
+            else if (controllerDir.x <= 0.5f && controllerDir.x >= -0.5f && controllerDir.y >= -0.5f && controllerDir.y <= 0.5f) //Neutral position
+            {
+                currentSpeed = playerSpeed;
+                inputBuild = 5;
+                change = true;
+                crouching = false;
+            }
+        }else if(lagFrames > 0) //End of if(lagFrames == 0)
+        {
+            lagFrames--;
+        }
+
+        airdashFrames--;    //needed to be subtracted here otherwise you can fly away as long as lagFrames last
+
+        if (change)
+        {
+            player1Inputs.insertFirst(inputBuild);
+            Debug.Log(player1Inputs.first.input);
+            change = false;
+        }
+        //Code that applies the velocity from jump, and also prevents character from falling through the ground and leaving us forever
+        //This does NOT require a rigidbody, and does NOT require a physical ground to stand on. This will not work on an uneven terrain without modifications
+        if (airdashFrames <= 0)
+            transform.Translate(new Vector3(horizontalVelocity, velocity, 0) * Time.deltaTime);
+        else
+            transform.Translate(new Vector3(horizontalVelocity, 0, 0) * Time.deltaTime);
+        if (transform.position.y <= floor) 
+        {
+            airborne = false;
+            transform.position = new Vector2(transform.position.x, floor);
+        }
+        if (!airborne) { 
+            horizontalVelocity = 0;
+            currAirDashes = numAirDashes;
+        }
+        currentInput = player1Inputs.first.input;
+    }//end update
+
+    public bool getLeft()
+    {
+        return left;
+    }
+
+    private void Jump(int direction)    //Direction being the numpad direction's 7, 8, and 9
+    {
+        if (direction == 7) 
+        {
+            if (left && player1Inputs.first.input != 7)
+            {
+                if (!airborne)
+                {
+                    velocity = Mathf.Sqrt(jumpHeight * -2 * (Physics2D.gravity.y * 5));
+                    horizontalVelocity = -playerSpeed;
+                    airborne = true;
+                }
+                inputBuild = 7;
+                change = true;
+            }
+            else if (!left && player1Inputs.first.input != 9)
+            {
+                if (!airborne)
+                {
+                    velocity = Mathf.Sqrt(jumpHeight * -2 * (Physics2D.gravity.y * 5));
+                    horizontalVelocity = -playerSpeed * jumpTowardsBonus;
+                    airborne = true;
+                }
+                inputBuild = 9;
+                change = true;
+            }
+        }
+        else if(direction == 8) 
+        {
+            if (!airborne)
+            {
+                velocity = Mathf.Sqrt(jumpHeight * -2 * (Physics2D.gravity.y * 5));
+                airborne = true;
+                lagFrames = jumpLag;
+            }
+        }
+        else if (direction == 9) 
+        {
+            if (left && player1Inputs.first.input != 9)
+            {
+                if (!airborne)
+                {
+                    velocity = Mathf.Sqrt(jumpHeight * -2 * (Physics2D.gravity.y * 5));
+                    horizontalVelocity = playerSpeed * jumpTowardsBonus;
+                    airborne = true;
+                }
+
+                inputBuild = 9;
+                change = true;
+            }
+            else if (!left && player1Inputs.first.input != 7)
+            {
+                if (!airborne)
+                {
+                    velocity = Mathf.Sqrt(jumpHeight * -2 * (Physics2D.gravity.y * 5));
+                    horizontalVelocity = playerSpeed;
+                    airborne = true;
+                }
+                inputBuild = 7;
+                change = true;
+            }
+        }
+    }
+    void OnTriggerEnter2D(Collider2D hitbox)
+    {
+        if (hitbox.tag == "Hitbox" && !Heftydefeated)
+        {
+            if (hitbox.GetComponent<HitboxData>().Player1 == false)
+            {
+                HitboxData hitboxInfo = hitbox.gameObject.GetComponent<HitboxData>();
+                if (canAct.canI("block"))
+                {
+                    if (currentInput == hitboxInfo.hitPos || currentInput % 3 == 1 && hitboxInfo.hitPos == 4)
+                    {
+                        Debug.Log("Block");
+                        Destroy(hitbox.gameObject);
+                        return;
+                    }
+                }
+                //Deal damage
+                float damageTaken = hitbox.GetComponent<HitboxData>().damage;
+                if (damageTaken <= 0)
+                    return;
+                player1HP -= damageTaken;
+                //Calculate health %
+                float subtractHP = damageTaken / totalHeftyHP;
+                // Debug.Log("subtractHP: " + subtractHP + " is this because " + damageTaken + " / " + totalHeftyHP);
+                player1HealthBarHP -= subtractHP;
+                // Debug.Log("Health: " + player1HealthBarHP);
+                //Apply health %
+                if (player1HealthBarHP <= 0)
+                {
+                    Healthbar.transform.localScale = new Vector3(0, 1, 1);
+                }
+                else
+                {
+                    Healthbar.transform.localScale = new Vector3(player1HealthBarHP, 1, 1);
+                }
+                //Play hurt/in combo animation and hurt sound
+                //p2_Audio.Play();
+                //I have none
+
+                //Apply force to player1
+                horizontalVelocity = 5;
+                velocity = Mathf.Sqrt(knockback * -2 * (Physics2D.gravity.y * 5));
+                if (left)
+                {
+                    horizontalVelocity = -Mathf.Abs(horizontalVelocity);
+                    Debug.Log("left");
+                }
+                else
+                {
+                    horizontalVelocity = Mathf.Abs(horizontalVelocity);
+                    Debug.Log("right");
+                }
+            }
+        }
+        else
+        {
+            Debug.Log("That's not a hitbox so I don't care");
+        }
+    }
+
+    public Vector3 getMyPos() 
+    {
+        return this.transform.position;
+    }
+
+    public Vector3 getTheirPos() 
+    {
+        return otherPlayer.transform.position;
+    }
+}
+
+
+//Double ended list for input storage/retrieval for special moves
+public class StoredInput//an input
+{
+    public int input;//needs to be able to hold multiple buttons at the same time
+    public StoredInput next;//reference to next Input
+    public StoredInput previous;//reference to previous input
+    public short timer = 120;//at the end of the timer, this input expires
+
+    public StoredInput(int newIn)
+    {
+        input = newIn;
+    }
+}
+
+public class InputList
+{
+    private StoredInput[] inputList = new StoredInput[60];//max amt of inputs that can be held, should be up to 1 sec of inputs, 60 frame game
+    public StoredInput first;
+    public StoredInput last;
+    private int numInputs = 0;
+
+    public InputList()//constructor
+    {
+        int initInput = 5;
+        first = new StoredInput(initInput);
+        last = first;
+    }
+
+    public void insertFirst(int input)//insert input, using standard notation corresponding to controller input
+    {
+        StoredInput newIn = new StoredInput(input);//make new StoredInput
+        ++numInputs;
+
+        first.previous = newIn;         //same steps, but this time set newIn as previous to old first
+        newIn.next = first;
+        first = newIn;
+
+
+        if (numInputs >= 60)//if past max inputs, delete last input
+        {
+            deleteLast();
+        }
+
+    }
+
+    public void decrementInputTimers(StoredInput i)
+    {
+        if (i == last)
+        {
+            return;
+        }
+        else if (--i.timer <= 0)
+        {
+            deleteLast();
+            return;
+        }
+        decrementInputTimers(i.next);
+    }
+
+    public void deleteLast()
+    {
+        if (last != first)
+        {
+           // Debug.Log("Deleted input: " + last.input);
+            last = last.previous;           //set last the the second to last StoredInput
+            last.next = null;               //new last sets old last to null
+           // Debug.Log("New last: " + last.input);
+        }
+    }
+
+    //search for a specific input combo after a button is pressed
+    public bool searchSpecial(int[] combo)
+    {
+        int correct = 0;
+        int timeLeft = 60;
+        StoredInput check = first;
+
+        if (numInputs >= combo.Length)
+        {
+            do
+            {
+                if (check.input == combo[correct])//combos are written backwards as the list will be read last in first out
+                {
+                    ++correct;
+                }
+                timeLeft -= 60 - check.timer;
+                check = check.next;
+            } while (timeLeft > 0 && correct < combo.Length && check != last);
+
+            if (correct >= combo.Length - 1)
+            {
+                clearInputs();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void clearInputs()
+    {
+        last = first;
+        numInputs = 1;
+    }
+
+}
+
+public class CanAct{
+    static public bool move = true;     //0
+    static public bool jump = true;     //1
+    static public bool crouch = true;   //2
+    static public bool attack = true;   //3
+    static public bool block = true;    //4
+    static public bool special = true;  //5
+    static public bool dash = true;     //6
+    static public bool nL = true;       //7
+    static public bool nM = true;       //8  
+    static public bool nH = true;       //9
+    static public bool cL = true;       //10
+    static public bool cM = true;       //11
+    static public bool cH = true;       //12
+    static public bool jL = true;       //13
+    static public bool jM = true;       //14
+    static public bool jH = true;       //15
+    static public bool fH = true;       //16
+    public bool[] attacks = { nL, nM, nH, cL, cM, cH, jL, jM, jH, fH };
+    public bool[] all = { move, jump, crouch, attack, block, special, dash, nL, nM, nH, cL, cM, cH, jL, jM, jH, fH };
+
+    public CanAct()
+    {
+
+    }
+
+    //disables all actions except those specified in params
+    public void lockExcept(params string[] actions)
+    {
+        for (int i = 0; i < all.Length; i++)
+        {
+            all[i] = false;
+        }
+        for (int i = 0; i < actions.Length; i++)
+        {
+            all[lookup(actions[i])] = true;
+        }
+    }
+
+    //enables all actions except those specified in params
+    public void freeExcept(params string[] actions)
+    {
+        for (int i = 0; i < all.Length; i++)
+        {
+            all[i] = true;
+        }
+        for (int i = 0; i < actions.Length; i++)
+        {
+            all[lookup(actions[i])] = false;
+        }
+    }
+
+    public void enable(string action)
+    {
+        all[lookup(action)] = true;
+    }
+
+    public void enable(params string[] actions)
+    {
+        foreach(string action in actions)
+        {
+            enable(action);
+        }
+    }
+
+    public void disable(string action)
+    {
+        all[lookup(action)] = false;
+    }
+
+    public void disable(params string[] actions)
+    {
+        foreach (string action in actions)
+        {
+            disable(action);
+        }
+    }
+
+    public bool anyAttacks()
+    {
+        for(int i = 0; i < attacks.Length; i++)
+        {
+            if (attacks[i])
+                return true;
+        }
+        return false;
+    }
+
+    public bool canI(string action)
+    {
+        return all[lookup(action)];
+    }
+
+    public bool canI(params string[] actions)
+    {
+        for(int i = 0; i < actions.Length; i++)
+        {
+            if (!canI(actions[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public int lookup(string action)
+    {
+        switch (action)
+        {
+            case "move":
+                return 0;
+            case "jump":
+                return 1;
+            case "crouch":
+                return 2;
+            case "attack":
+                return 3;
+            case "block":
+                return 4;
+            case "special":
+                return 5;
+            case "dash":
+                return 6;
+            case "5L":
+                return 7;
+            case "5M":
+                return 8;
+            case "5H":
+                return 9;
+            case "2L":
+                return 10;
+            case "2M":
+                return 11;
+            case "2H":
+                return 12;
+            case "jL":
+                return 13;
+            case "jM":
+                return 14;
+            case "jH":
+                return 15;
+            case "6H":
+                return 16;
+            default:
+                return -1;
+        }
+    }
+}
