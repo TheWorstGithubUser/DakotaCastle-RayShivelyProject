@@ -1,0 +1,155 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GameInput : MonoBehaviour
+{
+    private PlayerInputActions playerInputActions;
+    private void Awake()
+    {
+        playerInputActions = new PlayerInputActions();
+        playerInputActions.Player.Enable();
+        playerInputActions.Player2.Enable();
+    }
+
+    public Vector2 GetMovementVectorNormalized()
+    {
+        Vector2 inputVector = playerInputActions.Player.Input.ReadValue<Vector2>();
+
+        inputVector = inputVector.normalized;
+
+        return inputVector;
+    }
+
+    public char GetButton() 
+    {
+
+        //LIGHT
+        if (playerInputActions.Player.Light.WasPressedThisFrame())
+        {
+            return 'L';
+        }
+
+        if (playerInputActions.Player.Light.IsPressed())
+        {
+            //Unused right now
+        }
+
+        if (playerInputActions.Player.Light.WasReleasedThisFrame())
+        {
+            //Unused right now
+        }
+
+        //MEDIUM
+        if (playerInputActions.Player.Medium.WasPressedThisFrame())
+        {
+            return 'M';
+        }
+
+        if (playerInputActions.Player.Medium.IsPressed())
+        {
+            //Unused right now
+        }
+
+        if (playerInputActions.Player.Medium.WasReleasedThisFrame())
+        {
+            //Unused right now
+        }
+
+        //HEAVY
+        if (playerInputActions.Player.Heavy.WasPressedThisFrame())
+        {
+
+            return 'H';
+        }
+
+        if (playerInputActions.Player.Heavy.IsPressed())
+        {
+            //Unused right now
+        }
+
+        if (playerInputActions.Player.Heavy.WasReleasedThisFrame())
+        {
+            //Unused right now
+        }
+
+        //DASH
+        if (playerInputActions.Player.Dash.WasPressedThisFrame())
+        {
+            return 'D';
+        }
+
+        return '/'; //No button pressed
+    }
+
+    //Player 2
+    public Vector2 GetP2MovementVectorNormalized()
+    {
+        Vector2 inputVector = playerInputActions.Player2.Input2.ReadValue<Vector2>();
+        
+        inputVector = inputVector.normalized;
+
+        return inputVector;
+    }
+
+    public char GetP2Button()
+    {
+
+        //LIGHT
+        if (playerInputActions.Player2.Light2.WasPressedThisFrame())
+        {
+            return 'L';
+        }
+
+        if (playerInputActions.Player2.Light2.IsPressed())
+        {
+            //Unused right now
+        }
+
+        if (playerInputActions.Player2.Light2.WasReleasedThisFrame())
+        {
+            //Unused right now
+        }
+
+        //MEDIUM
+        if (playerInputActions.Player2.Medium2.WasPressedThisFrame())
+        {
+            return 'M';
+        }
+
+        if (playerInputActions.Player2.Medium2.IsPressed())
+        {
+            //Unused right now
+        }
+
+        if (playerInputActions.Player2.Medium2.WasReleasedThisFrame())
+        {
+            //Unused right now
+        }
+
+        //HEAVY
+        if (playerInputActions.Player2.Heavy2.WasPressedThisFrame())
+        {
+
+            return 'H';
+        }
+
+        if (playerInputActions.Player2.Heavy2.IsPressed())
+        {
+            //Unused right now
+        }
+
+        if (playerInputActions.Player2.Heavy2.WasReleasedThisFrame())
+        {
+            //Unused right now
+        }
+
+        //DASH
+        if (playerInputActions.Player2.Dash2.WasPressedThisFrame())
+        {
+            return 'D';
+        }
+
+        return '/'; //No button pressed
+    }
+}
